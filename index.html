@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>卡通大富翁 - 全特效動態版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        
+        :root {
+            --primary: #FF6B6B;
+            --secondary: #4ECDC4;
+            --accent: #FFE66D;
+            --bg: #F0F9FF;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg);
+            overflow: hidden; /* 防止 iPad 出現捲軸 */
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .cartoon-font { font-family: 'ZCOOL KuaiLe', sans-serif; }
+
+        /* 全螢幕容器 */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 動態棋盤容器 */
+        .monopoly-grid {
+            display: grid;
+            gap: 8px;
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+            flex: 1; /* 佔據剩餘空間 */
+            min-height: 0; /* 修正 Firefox/Safari flex 溢出問題 */
+        }
+
+        /* 格子基礎樣式 - 針對 iPad 優化大小 */
+        .slot {
+            background: white;
+            border: 2px solid #334155;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            font-weight: 900;
+            box-shadow: 0 3px 0 #334155;
+            z-index: 5;
+            overflow: hidden;
+            font-size: 0.875rem;
+        }
+
+        .slot.standing {
+            background: #FEE2E2;
+            border-color: #EF4444;
+            color: #B91C1C;
+            box-shadow: 0 3px 0 #B91C1C;
+        }
+
+        .slot.active {
+            transform: scale(1.1);
+            background: var(--accent) !important;
+            border-color: #000;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+            z-index: 50;
+        }
+
+        .slot.winner {
+            background: #22C55E !important;
+            color: white !important;
+            border-color: #000;
+            animation: bounce 0.5s infinite alternate;
+            z-index: 100;
+        }
+
+        .slot.targeting {
+            background: #DDD6FE !important;
+            border-color: #7C3AED !important;
+            transform: scale(1.05);
+        }
+
+        @keyframes bounce {
+            from { transform: scale(1.05) rotate(-2deg); }
+            to { transform: scale(1.15) rotate(2deg); }
+        }
+
+        /* 中間區域 */
+        .center-area {
+            background: rgba(255, 255, 255, 0.95);
+            border: 3px dashed #CBD5E1;
+            border-radius: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+            padding: 15px;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .btn-cartoon {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.1s;
+        }
+
+        .btn-cartoon:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0 #000;
+        }
+
+        /* 護盾徽章 */
+        .shield-badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: #3B82F6;
+            color: white;
+            font-size: 9px;
+            padding: 1px 4px;
+            border-radius: 8px;
+            border: 1.5px solid #000;
+        }
+
+        /* 全螢幕特效層 */
+        #fx-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 4px 0 #B91C1C;
+        }
+
+        /* 針對設定頁面的內部滾動 */
+        #page-settings {
+            height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="fx-overlay">🌟</div>
+
+    <div class="app-container">
+        <!-- 導覽欄 - 縮小高度 -->
+        <nav class="flex justify-center gap-4 mb-4">
+            <button onclick="showPage('game')" id="nav-game" class="tab-btn active px-6 py-2 rounded-xl font-black text-xl btn-cartoon transition-all">
+                🎯 遊戲大廳
+            </button>
+            <button onclick="showPage('settings')" id="nav-settings" class="tab-btn px-6 py-2 rounded-xl font-black text-xl btn-cartoon bg-white transition-all">
+                🛠️ 設定後台
+            </button>
+        </nav>
+
+        <!-- 遊戲分頁 -->
+        <div id="page-game" class="flex flex-col flex-1 min-height-0 space-y-3">
+            <!-- 班級快速選擇區 - 更加緊湊 -->
+            <div class="bg-white px-4 py-3 rounded-2xl border-2 border-black shadow-[4px_4px_0_#000] space-y-2">
+                <div class="flex items-center gap-3 border-b border-slate-50 pb-2 overflow-x-auto no-scrollbar">
+                    <span class="font-black text-sm text-slate-500 whitespace-nowrap">切換班級:</span>
+                    <div id="game-class-tabs" class="flex gap-2"></div>
+                </div>
+                <div id="shield-status-bar" class="flex items-center gap-3">
+                    <span class="font-black text-xs text-slate-400 whitespace-nowrap">🛡️ 保護罩:</span>
+                    <div id="shield-list" class="flex flex-wrap gap-1"></div>
+                </div>
+            </div>
+
+            <!-- 動態大富翁棋盤 -->
+            <div id="board-container" class="flex-1 min-height-0 relative py-2">
+                <div id="game-board" class="monopoly-grid"></div>
+            </div>
+        </div>
+
+        <!-- 隱藏的 UI 模板 -->
+        <div id="ui-templates" class="hidden">
+            <div id="tpl-idle" class="flex flex-col items-center">
+                <div class="text-5xl mb-4 animate-bounce">🎰</div>
+                <button id="spin-btn" onclick="startSpin()" class="btn-cartoon bg-indigo-500 text-white text-2xl font-black px-8 py-4 rounded-2xl">
+                    開始抽籤!
+                </button>
+            </div>
+
+            <div id="tpl-result" class="text-center w-full animate-in fade-in zoom-in duration-300">
+                <h2 id="winner-name" class="text-4xl font-black text-indigo-600 cartoon-font mb-2">學生姓名</h2>
+                <p id="winner-status" class="text-sm font-bold mb-4 text-slate-500 italic">準備接受挑戰!</p>
+                <div class="flex justify-center gap-3 max-w-xs mx-auto">
+                    <button onclick="triggerRewardFlow()" class="flex-1 btn-cartoon bg-emerald-500 text-white py-3 rounded-xl font-black text-lg">答對了 ✨</button>
+                    <button onclick="handleWrong()" class="flex-1 btn-cartoon bg-rose-500 text-white py-3 rounded-xl font-black text-lg">答錯了 💥</button>
+                </div>
+            </div>
+
+            <div id="tpl-rewards" class="text-center w-full">
+                <h3 class="text-xl font-black text-emerald-600 cartoon-font mb-3">🎁 選擇獎勵!</h3>
+                <div class="grid grid-cols-1 gap-2 max-w-xs mx-auto">
+                    <button onclick="applyReward('shield')" class="btn-cartoon bg-cyan-400 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><span>🛡️</span> 獲得一個保護罩</button>
+                    <button onclick="applyReward('break')" class="btn-cartoon bg-violet-500 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><span>🎯</span> 指定一人保護罩 -1</button>
+                    <button onclick="applyReward('stand')" class="btn-cartoon bg-orange-400 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><span>🏃</span> 隨機選一位起身</button>
+                    <button onclick="applyReward('sit')" class="btn-cartoon bg-teal-400 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><span>🪑</span> 隨機讓一位坐下</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 設定分頁 -->
+        <div id="page-settings" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6 p-2">
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white p-6 rounded-2xl border-2 border-black shadow-[4px_4px_0_#000]">
+                    <h2 class="text-xl font-black mb-4">班級列表</h2>
+                    <div id="settings-class-list" class="space-y-2 mb-4"></div>
+                    <button onclick="openModal()" class="w-full btn-cartoon bg-indigo-500 text-white py-3 rounded-xl font-black text-lg">＋ 新增班級</button>
+                </div>
+            </div>
+            <div class="lg:col-span-2">
+                <div class="bg-white p-6 rounded-2xl border-2 border-black shadow-[4px_4px_0_#000] min-h-[400px]">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 id="settings-class-title" class="text-2xl font-black text-indigo-600">請選擇班級</h2>
+                        <button onclick="deleteClass()" id="btn-delete-class" class="text-rose-500 font-bold hidden hover:underline">刪除班級</button>
+                    </div>
+                    <div id="settings-students-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 彈窗 -->
+    <div id="modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-6 z-[1000]">
+        <div class="bg-white rounded-[30px] border-4 border-black w-full max-w-lg p-8">
+            <h2 class="text-2xl font-black mb-6 cartoon-font text-indigo-600">創建新班級</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block font-black text-sm mb-1">班級名稱</label>
+                    <input id="in-class-name" type="text" placeholder="例如: 6B 班" class="w-full p-3 rounded-xl border-2 border-black font-bold">
+                </div>
+                <div>
+                    <label class="block font-black text-sm mb-1">學生名單 (一行一個名字)</label>
+                    <textarea id="in-student-names" rows="5" placeholder="張小明&#10;王小花..." class="w-full p-3 rounded-xl border-2 border-black font-bold resize-none"></textarea>
+                </div>
+                <div class="flex gap-3 justify-end pt-4">
+                    <button onclick="closeModal()" class="font-black px-4">取消</button>
+                    <button onclick="saveNewClass()" class="btn-cartoon bg-indigo-500 text-white px-8 py-2 rounded-xl font-black text-lg">完成!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let classes = JSON.parse(localStorage.getItem('monopoly_v4_data')) || [];
+        let activeClassId = localStorage.getItem('monopoly_v4_active_id') || null;
+        let isSpinning = false;
+        let currentWinnerId = null;
+
+        function init() {
+            if (classes.length > 0 && !activeClassId) activeClassId = classes[0].id;
+            refreshUI();
+            showPage('game');
+            window.addEventListener('resize', () => { if(!isSpinning) renderBoard(); });
+        }
+
+        function refreshUI() {
+            localStorage.setItem('monopoly_v4_data', JSON.stringify(classes));
+            localStorage.setItem('monopoly_v4_active_id', activeClassId);
+            renderClassTabs();
+            renderShieldStatus();
+        }
+
+        function renderShieldStatus() {
+            const shieldList = document.getElementById('shield-list');
+            if (!shieldList) return;
+            const currentCls = classes.find(c => c.id === activeClassId);
+            if (!currentCls) return;
+            const shieldStudents = currentCls.students.filter(s => s.shield > 0);
+            shieldList.innerHTML = shieldStudents.map(s => `
+                <div class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-200 text-[10px] font-bold flex items-center gap-1">
+                    <span>${s.name}</span>
+                    <span class="bg-blue-500 text-white px-1 rounded-full">${s.shield}</span>
+                </div>
+            `).join('') || '<span class="text-slate-300 text-[10px] italic">目前無人擁有</span>';
+        }
+
+        function showPage(page) {
+            if (isSpinning) return;
+            document.getElementById('page-game').classList.toggle('hidden', page !== 'game');
+            document.getElementById('page-settings').classList.toggle('hidden', page !== 'settings');
+            document.getElementById('nav-game').classList.toggle('active', page === 'game');
+            document.getElementById('nav-settings').classList.toggle('active', page === 'settings');
+            if (page === 'game') renderBoard();
+            else renderSettings();
+        }
+
+        function renderClassTabs() {
+            const container = document.getElementById('game-class-tabs');
+            container.innerHTML = classes.map(cls => `
+                <button onclick="switchClass('${cls.id}')" class="px-4 py-1 rounded-lg border-2 font-black text-xs transition-all ${activeClassId === cls.id ? 'bg-indigo-500 text-white border-black shadow-[2px_2px_0_#000]' : 'bg-slate-50 text-slate-400 border-slate-100'}">
+                    ${cls.name}
+                </button>
+            `).join('');
+
+            const settingsList = document.getElementById('settings-class-list');
+            settingsList.innerHTML = classes.map(cls => `
+                <button onclick="switchClass('${cls.id}')" class="w-full text-left p-3 rounded-xl border-2 font-black flex justify-between items-center text-sm ${activeClassId === cls.id ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white border-slate-100 text-slate-400'}">
+                    ${cls.name} <span class="text-xs">${cls.students.length}人</span>
+                </button>
+            `).join('');
+        }
+
+        function switchClass(id) {
+            if (isSpinning) return;
+            activeClassId = id;
+            refreshUI();
+            if (!document.getElementById('page-game').classList.contains('hidden')) renderBoard();
+            else renderSettings();
+        }
+
+        function renderSettings() {
+            const currentCls = classes.find(c => c.id === activeClassId);
+            const grid = document.getElementById('settings-students-grid');
+            const delBtn = document.getElementById('btn-delete-class');
+            if (!currentCls) { grid.innerHTML = ""; return; }
+            delBtn.classList.remove('hidden');
+            grid.innerHTML = currentCls.students.map(s => `
+                <div class="bg-slate-50 border border-black p-3 rounded-xl">
+                    <div class="font-black text-sm mb-2 truncate text-center">${s.name}</div>
+                    <div class="flex items-center justify-between gap-1 mb-2">
+                        <button onclick="adjShield('${s.id}', -1)" class="w-6 h-6 rounded-full bg-white border border-black text-xs">-</button>
+                        <span class="font-black text-xs text-indigo-600">🛡️ ${s.shield}</span>
+                        <button onclick="adjShield('${s.id}', 1)" class="w-6 h-6 rounded-full bg-white border border-black text-xs">+</button>
+                    </div>
+                    <button onclick="toggleStand('${s.id}')" class="w-full py-1 rounded-lg border border-black font-black text-[10px] ${s.isStanding ? 'bg-rose-500 text-white' : 'bg-white'}">
+                        ${s.isStanding ? '坐低' : '企起身'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function adjShield(sid, val) {
+            const cls = classes.find(c => c.id === activeClassId);
+            const s = cls.students.find(x => x.id === sid);
+            s.shield = Math.max(0, s.shield + val);
+            refreshUI();
+            renderSettings();
+        }
+
+        function toggleStand(sid) {
+            const cls = classes.find(c => c.id === activeClassId);
+            const s = cls.students.find(x => x.id === sid);
+            s.isStanding = !s.isStanding;
+            refreshUI();
+            renderSettings();
+        }
+
+        function openModal() { document.getElementById('modal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        function saveNewClass() {
+            const name = document.getElementById('in-class-name').value.trim();
+            const names = document.getElementById('in-student-names').value.trim();
+            if (!name || !names) return;
+            const newCls = {
+                id: 'cls_' + Date.now(),
+                name: name,
+                students: names.split('\n').map(n => n.trim()).filter(n => n).map(n => ({
+                    id: 's_' + Math.random().toString(36).substr(2, 9),
+                    name: n,
+                    shield: 0,
+                    isStanding: false
+                }))
+            };
+            classes.push(newCls);
+            activeClassId = newCls.id;
+            refreshUI();
+            closeModal();
+            showPage('settings');
+        }
+
+        function deleteClass() {
+            if (!confirm('確定刪除此班級嗎？')) return;
+            classes = classes.filter(c => c.id !== activeClassId);
+            activeClassId = classes.length > 0 ? classes[0].id : null;
+            refreshUI();
+            renderSettings();
+        }
+
+        function renderBoard() {
+            const currentCls = classes.find(c => c.id === activeClassId);
+            const board = document.getElementById('game-board');
+            if (!currentCls || currentCls.students.length === 0) return;
+
+            const studentCount = currentCls.students.length;
+            let cols = Math.ceil(Math.sqrt(studentCount)) + 1;
+            let rows = Math.ceil(studentCount / 2) - cols + 2;
+            if (rows < 3) rows = 3; 
+            while (2 * cols + 2 * rows - 4 < studentCount) cols++;
+
+            board.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            board.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+            const pathPos = [];
+            for (let i = 0; i < cols; i++) pathPos.push({ r: 1, c: i + 1 });
+            for (let i = 1; i < rows; i++) pathPos.push({ r: i + 1, c: cols });
+            for (let i = cols - 2; i >= 0; i--) pathPos.push({ r: rows, c: i + 1 });
+            for (let i = rows - 2; i >= 1; i--) pathPos.push({ r: i + 1, c: 1 });
+
+            board.innerHTML = '';
+            const center = document.createElement('div');
+            center.id = 'main-center';
+            center.className = 'center-area';
+            center.style.gridColumn = `2 / ${cols}`;
+            center.style.gridRow = `2 / ${rows}`;
+            board.appendChild(center);
+
+            pathPos.forEach((pos, idx) => {
+                const stu = currentCls.students[idx];
+                if (!stu) return;
+                const slot = document.createElement('div');
+                slot.id = `slot-${idx}`;
+                slot.className = `slot ${stu.isStanding ? 'standing' : ''}`;
+                slot.style.gridColumn = pos.c;
+                slot.style.gridRow = pos.r;
+                slot.innerHTML = `<span class="truncate w-full px-1 text-center">${stu.name}</span>${stu.shield > 0 ? `<div class="shield-badge">🛡️ ${stu.shield}</div>` : ''}`;
+                slot.dataset.sid = stu.id;
+                board.appendChild(slot);
+            });
+            resetGameUI();
+        }
+
+        function resetGameUI() {
+            const center = document.getElementById('main-center');
+            if (!center) return;
+            center.innerHTML = document.getElementById('tpl-idle').innerHTML;
+            document.querySelectorAll('.slot').forEach(s => s.classList.remove('active', 'winner', 'targeting'));
+        }
+
+        function startSpin() {
+            if (isSpinning) return;
+            const currentCls = classes.find(c => c.id === activeClassId);
+            if (!currentCls || currentCls.students.length === 0) return;
+            isSpinning = true;
+            const slots = Array.from(document.querySelectorAll('.slot'));
+            const total = slots.length;
+            const rounds = 3;
+            const stopIdx = Math.floor(Math.random() * total);
+            const target = (total * rounds) + stopIdx;
+            let current = 0;
+            let speed = 50;
+            function run() {
+                slots.forEach(s => s.classList.remove('active'));
+                const activeIdx = current % total;
+                slots[activeIdx].classList.add('active');
+                if (current < target) {
+                    current++;
+                    if (target - current < 10) speed += 40;
+                    setTimeout(run, speed);
+                } else {
+                    const winnerSlot = slots[activeIdx];
+                    winnerSlot.classList.add('winner');
+                    isSpinning = false;
+                    showWinner(winnerSlot.dataset.sid);
+                }
+            }
+            run();
+        }
+
+        function showWinner(sid) {
+            currentWinnerId = sid;
+            const stu = classes.find(c => c.id === activeClassId).students.find(x => x.id === sid);
+            const center = document.getElementById('main-center');
+            center.innerHTML = document.getElementById('tpl-result').innerHTML;
+            document.getElementById('winner-name').innerText = stu.name;
+            const status = document.getElementById('winner-status');
+            if (stu.shield > 0) {
+                status.innerText = `🛡️ 剩餘 ${stu.shield} 個保護罩`;
+                status.className = 'text-xs font-bold mb-2 text-blue-500';
+            } else if (stu.isStanding) {
+                status.innerText = "🏃 目前罰企中！";
+                status.className = 'text-xs font-bold mb-2 text-rose-500';
+            } else {
+                status.innerText = "準備接受挑戰！";
+                status.className = 'text-xs font-bold mb-2 text-slate-500';
+            }
+        }
+
+        function triggerRewardFlow() {
+            const center = document.getElementById('main-center');
+            center.innerHTML = document.getElementById('tpl-rewards').innerHTML;
+        }
+
+        function handleWrong() {
+            const cls = classes.find(c => c.id === activeClassId);
+            const stu = cls.students.find(x => x.id === currentWinnerId);
+            if (stu.shield > 0) {
+                stu.shield--;
+                showFX('🛡️ 抵銷！');
+            } else {
+                stu.isStanding = true;
+                showFX('😫 企起身！');
+            }
+            refreshUI();
+            setTimeout(renderBoard, 1500);
+        }
+
+        function applyReward(type) {
+            const cls = classes.find(c => c.id === activeClassId);
+            const winner = cls.students.find(x => x.id === currentWinnerId);
+            if (type === 'shield') {
+                winner.shield++;
+                showFX('🛡️ 獎勵保護罩！');
+                refreshUI();
+                setTimeout(renderBoard, 1500);
+            } else if (type === 'break') {
+                randomBreakShield();
+            } else if (type === 'stand' || type === 'sit') {
+                randomSelectEffect(type === 'sit');
+            }
+        }
+
+        function randomBreakShield() {
+            const cls = classes.find(c => c.id === activeClassId);
+            const candidates = cls.students.filter(s => s.shield > 0);
+            if (candidates.length === 0) { showFX('❌ 無人有保護罩'); setTimeout(renderBoard, 1500); return; }
+            showFX('🔍 搜尋目標...');
+            const slots = Array.from(document.querySelectorAll('.slot'));
+            let counter = 0;
+            const interval = setInterval(() => {
+                slots.forEach(s => s.classList.remove('targeting'));
+                slots[Math.floor(Math.random() * slots.length)].classList.add('targeting');
+                if (++counter > 15) {
+                    clearInterval(interval);
+                    const targetStu = candidates[Math.floor(Math.random() * candidates.length)];
+                    targetStu.shield = Math.max(0, targetStu.shield - 1);
+                    showFX(`💥 ${targetStu.name} 保護罩 -1！`);
+                    refreshUI();
+                    setTimeout(renderBoard, 1800);
+                }
+            }, 80);
+        }
+
+        function randomSelectEffect(isLookingForStanding) {
+            const cls = classes.find(c => c.id === activeClassId);
+            const candidates = cls.students.filter(s => isLookingForStanding ? s.isStanding : !s.isStanding);
+            if (candidates.length === 0) { showFX('❌ 無人選'); setTimeout(renderBoard, 1500); return; }
+            showFX('🔍 搜尋中...');
+            const slots = Array.from(document.querySelectorAll('.slot'));
+            let counter = 0;
+            const interval = setInterval(() => {
+                slots.forEach(s => s.classList.remove('targeting'));
+                slots[Math.floor(Math.random() * slots.length)].classList.add('targeting');
+                if (++counter > 15) {
+                    clearInterval(interval);
+                    const targetStu = candidates[Math.floor(Math.random() * candidates.length)];
+                    targetStu.isStanding = !isLookingForStanding;
+                    showFX(isLookingForStanding ? `🪑 ${targetStu.name} 坐低！` : `🏃 ${targetStu.name} 企起身！`);
+                    refreshUI();
+                    setTimeout(renderBoard, 1800);
+                }
+            }, 80);
+        }
+
+        function showFX(text) {
+            const overlay = document.getElementById('fx-overlay');
+            overlay.innerText = text;
+            overlay.style.opacity = '1';
+            setTimeout(() => { overlay.style.opacity = '0'; }, 1500);
+        }
+
+        init();
+    </script>
+</body>
+</html>
