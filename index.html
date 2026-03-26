@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>卡通大富翁 - 全特效動態版</title>
+    <title>卡通大富翁 - 本地增強版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+TC:wght@400;700;900&display=swap');
@@ -18,14 +18,13 @@
         body {
             font-family: 'Noto Sans TC', sans-serif;
             background-color: var(--bg);
-            overflow: hidden; /* 防止 iPad 出現捲軸 */
+            overflow: hidden;
             height: 100vh;
             width: 100vw;
         }
 
         .cartoon-font { font-family: 'ZCOOL KuaiLe', sans-serif; }
 
-        /* 全螢幕容器 */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -35,18 +34,16 @@
             margin: 0 auto;
         }
 
-        /* 動態棋盤容器 */
         .monopoly-grid {
             display: grid;
             gap: 8px;
             width: 100%;
             margin: 0 auto;
             position: relative;
-            flex: 1; /* 佔據剩餘空間 */
-            min-height: 0; /* 修正 Firefox/Safari flex 溢出問題 */
+            flex: 1;
+            min-height: 0;
         }
 
-        /* 格子基礎樣式 - 針對 iPad 優化大小 */
         .slot {
             background: white;
             border: 2px solid #334155;
@@ -98,7 +95,6 @@
             to { transform: scale(1.15) rotate(2deg); }
         }
 
-        /* 中間區域 */
         .center-area {
             background: rgba(255, 255, 255, 0.95);
             border: 3px dashed #CBD5E1;
@@ -125,7 +121,6 @@
             box-shadow: 1px 1px 0 #000;
         }
 
-        /* 護盾徽章 */
         .shield-badge {
             position: absolute;
             top: 2px;
@@ -138,7 +133,6 @@
             border: 1.5px solid #000;
         }
 
-        /* 全螢幕特效層 */
         #fx-overlay {
             position: fixed;
             inset: 0;
@@ -160,7 +154,6 @@
             box-shadow: 0 4px 0 #B91C1C;
         }
 
-        /* 針對設定頁面的內部滾動 */
         #page-settings {
             height: calc(100vh - 120px);
             overflow-y: auto;
@@ -172,7 +165,7 @@
     <div id="fx-overlay">🌟</div>
 
     <div class="app-container">
-        <!-- 導覽欄 - 縮小高度 -->
+        <!-- 導覽欄 -->
         <nav class="flex justify-center gap-4 mb-4">
             <button onclick="showPage('game')" id="nav-game" class="tab-btn active px-6 py-2 rounded-xl font-black text-xl btn-cartoon transition-all">
                 🎯 遊戲大廳
@@ -184,7 +177,6 @@
 
         <!-- 遊戲分頁 -->
         <div id="page-game" class="flex flex-col flex-1 min-height-0 space-y-3">
-            <!-- 班級快速選擇區 - 更加緊湊 -->
             <div class="bg-white px-4 py-3 rounded-2xl border-2 border-black shadow-[4px_4px_0_#000] space-y-2">
                 <div class="flex items-center gap-3 border-b border-slate-50 pb-2 overflow-x-auto no-scrollbar">
                     <span class="font-black text-sm text-slate-500 whitespace-nowrap">切換班級:</span>
@@ -196,38 +188,8 @@
                 </div>
             </div>
 
-            <!-- 動態大富翁棋盤 -->
             <div id="board-container" class="flex-1 min-height-0 relative py-2">
                 <div id="game-board" class="monopoly-grid"></div>
-            </div>
-        </div>
-
-        <!-- 隱藏的 UI 模板 -->
-        <div id="ui-templates" class="hidden">
-            <div id="tpl-idle" class="flex flex-col items-center">
-                <div class="text-5xl mb-4 animate-bounce">🎰</div>
-                <button id="spin-btn" onclick="startSpin()" class="btn-cartoon bg-indigo-500 text-white text-2xl font-black px-8 py-4 rounded-2xl">
-                    開始抽籤!
-                </button>
-            </div>
-
-            <div id="tpl-result" class="text-center w-full animate-in fade-in zoom-in duration-300">
-                <h2 id="winner-name" class="text-4xl font-black text-indigo-600 cartoon-font mb-2">學生姓名</h2>
-                <p id="winner-status" class="text-sm font-bold mb-4 text-slate-500 italic">準備接受挑戰!</p>
-                <div class="flex justify-center gap-3 max-w-xs mx-auto">
-                    <button onclick="triggerRewardFlow()" class="flex-1 btn-cartoon bg-emerald-500 text-white py-3 rounded-xl font-black text-lg">答對了 ✨</button>
-                    <button onclick="handleWrong()" class="flex-1 btn-cartoon bg-rose-500 text-white py-3 rounded-xl font-black text-lg">答錯了 💥</button>
-                </div>
-            </div>
-
-            <div id="tpl-rewards" class="text-center w-full">
-                <h3 class="text-xl font-black text-emerald-600 cartoon-font mb-3">🎁 選擇獎勵!</h3>
-                <div class="grid grid-cols-1 gap-2 max-w-xs mx-auto">
-                    <button onclick="applyReward('shield')" class="btn-cartoon bg-cyan-400 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><span>🛡️</span> 獲得一個保護罩</button>
-                    <button onclick="applyReward('break')" class="btn-cartoon bg-violet-500 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><span>🎯</span> 指定一人保護罩 -1</button>
-                    <button onclick="applyReward('stand')" class="btn-cartoon bg-orange-400 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><span>🏃</span> 隨機選一位起身</button>
-                    <button onclick="applyReward('sit')" class="btn-cartoon bg-teal-400 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><span>🪑</span> 隨機讓一位坐下</button>
-                </div>
             </div>
         </div>
 
@@ -239,7 +201,17 @@
                     <div id="settings-class-list" class="space-y-2 mb-4"></div>
                     <button onclick="openModal()" class="w-full btn-cartoon bg-indigo-500 text-white py-3 rounded-xl font-black text-lg">＋ 新增班級</button>
                 </div>
+
+                <!-- 重設區 -->
+                <div id="reset-control-panel" class="bg-rose-50 p-6 rounded-2xl border-2 border-rose-200 hidden">
+                    <h3 class="font-black text-rose-600 mb-2">危險區域</h3>
+                    <p class="text-xs text-rose-400 mb-4">將重設目前班級所有學生的保護罩與罰企狀態。</p>
+                    <button onclick="resetAllStates()" class="w-full btn-cartoon bg-rose-500 text-white py-2 rounded-xl font-black">
+                        🔄 重設所有狀態
+                    </button>
+                </div>
             </div>
+            
             <div class="lg:col-span-2">
                 <div class="bg-white p-6 rounded-2xl border-2 border-black shadow-[4px_4px_0_#000] min-h-[400px]">
                     <div class="flex justify-between items-center mb-6">
@@ -247,6 +219,33 @@
                         <button onclick="deleteClass()" id="btn-delete-class" class="text-rose-500 font-bold hidden hover:underline">刪除班級</button>
                     </div>
                     <div id="settings-students-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- UI 模板 -->
+        <div id="ui-templates" class="hidden">
+            <div id="tpl-idle" class="flex flex-col items-center">
+                <div class="text-5xl mb-4 animate-bounce">🎰</div>
+                <button id="spin-btn" onclick="startSpin()" class="btn-cartoon bg-indigo-500 text-white text-2xl font-black px-8 py-4 rounded-2xl">
+                    開始抽籤!
+                </button>
+            </div>
+            <div id="tpl-result" class="text-center w-full animate-in fade-in zoom-in duration-300">
+                <h2 id="winner-name" class="text-4xl font-black text-indigo-600 cartoon-font mb-2">姓名</h2>
+                <p id="winner-status" class="text-sm font-bold mb-4 text-slate-500 italic">挑戰中</p>
+                <div class="flex justify-center gap-3 max-w-xs mx-auto">
+                    <button onclick="triggerRewardFlow()" class="flex-1 btn-cartoon bg-emerald-500 text-white py-3 rounded-xl font-black text-lg">答對了 ✨</button>
+                    <button onclick="handleWrong()" class="flex-1 btn-cartoon bg-rose-500 text-white py-3 rounded-xl font-black text-lg">答錯了 💥</button>
+                </div>
+            </div>
+            <div id="tpl-rewards" class="text-center w-full">
+                <h3 class="text-xl font-black text-emerald-600 cartoon-font mb-3">🎁 選擇獎勵!</h3>
+                <div class="grid grid-cols-1 gap-2 max-w-xs mx-auto">
+                    <button onclick="applyReward('shield')" class="btn-cartoon bg-cyan-400 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><span>🛡️</span> 獲得一個保護罩</button>
+                    <button onclick="applyReward('break')" class="btn-cartoon bg-violet-500 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><span>🎯</span> 指定一人保護罩 -1</button>
+                    <button onclick="applyReward('stand')" class="btn-cartoon bg-orange-400 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><span>🏃</span> 隨機選一位起身</button>
+                    <button onclick="applyReward('sit')" class="btn-cartoon bg-teal-400 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><span>🪑</span> 隨機讓一位坐下</button>
                 </div>
             </div>
         </div>
@@ -274,13 +273,13 @@
     </div>
 
     <script>
+        // 本地存儲邏輯
         let classes = JSON.parse(localStorage.getItem('monopoly_v4_data')) || [];
-        let activeClassId = localStorage.getItem('monopoly_v4_active_id') || null;
+        let activeClassId = localStorage.getItem('monopoly_v4_active_id') || (classes.length > 0 ? classes[0].id : null);
         let isSpinning = false;
         let currentWinnerId = null;
 
         function init() {
-            if (classes.length > 0 && !activeClassId) activeClassId = classes[0].id;
             refreshUI();
             showPage('game');
             window.addEventListener('resize', () => { if(!isSpinning) renderBoard(); });
@@ -291,6 +290,8 @@
             localStorage.setItem('monopoly_v4_active_id', activeClassId);
             renderClassTabs();
             renderShieldStatus();
+            if (document.getElementById('page-game').classList.contains('hidden')) renderSettings();
+            else renderBoard();
         }
 
         function renderShieldStatus() {
@@ -337,16 +338,26 @@
             if (isSpinning) return;
             activeClassId = id;
             refreshUI();
-            if (!document.getElementById('page-game').classList.contains('hidden')) renderBoard();
-            else renderSettings();
         }
 
         function renderSettings() {
             const currentCls = classes.find(c => c.id === activeClassId);
             const grid = document.getElementById('settings-students-grid');
             const delBtn = document.getElementById('btn-delete-class');
-            if (!currentCls) { grid.innerHTML = ""; return; }
+            const title = document.getElementById('settings-class-title');
+            const resetPanel = document.getElementById('reset-control-panel');
+            
+            if (!currentCls) { 
+                grid.innerHTML = ""; 
+                title.innerText = "請選擇班級"; 
+                resetPanel.classList.add('hidden');
+                return; 
+            }
+            
+            title.innerText = currentCls.name;
             delBtn.classList.remove('hidden');
+            resetPanel.classList.remove('hidden');
+            
             grid.innerHTML = currentCls.students.map(s => `
                 <div class="bg-slate-50 border border-black p-3 rounded-xl">
                     <div class="font-black text-sm mb-2 truncate text-center">${s.name}</div>
@@ -367,7 +378,6 @@
             const s = cls.students.find(x => x.id === sid);
             s.shield = Math.max(0, s.shield + val);
             refreshUI();
-            renderSettings();
         }
 
         function toggleStand(sid) {
@@ -375,7 +385,21 @@
             const s = cls.students.find(x => x.id === sid);
             s.isStanding = !s.isStanding;
             refreshUI();
-            renderSettings();
+        }
+
+        // 新增：重設所有狀態
+        function resetAllStates() {
+            const currentCls = classes.find(c => c.id === activeClassId);
+            if (!currentCls) return;
+            
+            if (confirm(`確定要重設 ${currentCls.name} 的所有學生狀態嗎？\n(保護罩歸零、全部坐下)`)) {
+                currentCls.students.forEach(s => {
+                    s.shield = 0;
+                    s.isStanding = false;
+                });
+                showFX('🔄 已重設狀態');
+                refreshUI();
+            }
         }
 
         function openModal() { document.getElementById('modal').style.display = 'flex'; }
@@ -407,13 +431,15 @@
             classes = classes.filter(c => c.id !== activeClassId);
             activeClassId = classes.length > 0 ? classes[0].id : null;
             refreshUI();
-            renderSettings();
         }
 
         function renderBoard() {
             const currentCls = classes.find(c => c.id === activeClassId);
             const board = document.getElementById('game-board');
-            if (!currentCls || currentCls.students.length === 0) return;
+            if (!currentCls || currentCls.students.length === 0) {
+                board.innerHTML = '<div class="flex items-center justify-center w-full h-full text-slate-300 font-bold">請先至設定後台新增班級</div>';
+                return;
+            }
 
             const studentCount = currentCls.students.length;
             let cols = Math.ceil(Math.sqrt(studentCount)) + 1;
